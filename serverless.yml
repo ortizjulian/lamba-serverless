@@ -29,7 +29,7 @@ functions:
     package:
       artifact: lambas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
     events:
-      - httpApi:
+      - http:
           path: /users/{id}
           method: get
 
@@ -39,6 +39,6 @@ functions:
     package:
       artifact: lambas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
     events:
-      - httpApi:
+      - http:
           path: /users
           method: post

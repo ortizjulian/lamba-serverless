@@ -14,12 +14,12 @@ functions:
   getUserJava:
     handler: com.serverless.GetUser
     events:
-      - httpApi:
+      - http:
           path: /users/{id}
           method: get
   createUserJava:
     handler: com.serverless.CreateUser
     events:
-      - httpApi:
+      - http:
           path: /users
           method: post
