@@ -1,0 +1,44 @@
+service: crud-lambda
+
+provider:
+  name: aws
+  region: us-east-1
+
+functions:
+  # Funciones Node.js
+  deleteUserNode:
+    handler: lambas-node/handlers/deleteUser.deleteUser
+    runtime: nodejs20.x
+    events:
+      - http:
+          path: /users/{id}
+          method: delete
+
+  updateUserNode:
+    handler: lambas-node/handlers/updateUser.updateUser
+    runtime: nodejs20.x
+    events:
+      - http:
+          path: /users/{id}
+          method: put
+
+  # Funciones Java
+  getUserJava:
+    handler: com.serverless.GetUser
+    runtime: java17
+    package:
+      artifact: lambas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: get
+
+  createUserJava:
+    handler: com.serverless.CreateUser
+    runtime: java17
+    package:
+      artifact: lambas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
+    events:
+      - httpApi:
+          path: /users
+          method: post

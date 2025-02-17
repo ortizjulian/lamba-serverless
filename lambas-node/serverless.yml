@@ -1,0 +1,22 @@
+org: julianortiz
+
+service: crud-lamba
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+
+functions:
+  deleteUser:
+    handler: handlers/deleteUser.deleteUser
+    events:
+      - http:
+          path: /users/{id}
+          method: delete
+  updateUser:
+    handler: handlers/updateUser.updateUser
+    events:
+      - http:
+          path: /users/{id}
+          method: put

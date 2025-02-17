@@ -1,0 +1,25 @@
+org: julianortiz
+
+service: crud-lambda
+
+provider:
+  name: aws
+  runtime: java17
+  region: us-east-1
+
+package:
+  artifact: build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
+
+functions:
+  getUserJava:
+    handler: com.serverless.GetUser
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: get
+  createUserJava:
+    handler: com.serverless.CreateUser
+    events:
+      - httpApi:
+          path: /users
+          method: post
