@@ -6,7 +6,12 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
 import com.serverless.model.User;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.serverless.utils.JsonUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,9 +20,11 @@ import java.util.UUID;
 public class UserService {
 
     private AmazonDynamoDB amazonDynamoDB;
+
     private String DYNAMODB_TABLE_NAME = "user";
     private Regions REGION = Regions.US_EAST_1;
-
+    private AmazonSQS amazonSQS = AmazonSQSClient.builder().withRegion(REGION).build();
+    private String SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/738256604744/colaUsuarioCreado";
     public void initDynamoDbClient() {
         this.amazonDynamoDB = AmazonDynamoDBClientBuilder.standard()
                 .withRegion(REGION)
@@ -34,8 +41,20 @@ public class UserService {
         attributesMap.put("email", new AttributeValue(personRequest.getEmail()));
 
         amazonDynamoDB.putItem(DYNAMODB_TABLE_NAME, attributesMap);
-
+        personRequest.setId(userId);
+        sendSqs(personRequest);
         return userId;
+    }
+
+    public void sendSqs(User person) {
+
+        String userJson = JsonUtil.toJson(person);
+
+        SendMessageRequest sendMessageRequest = new SendMessageRequest()
+                .withQueueUrl(SQS_QUEUE_URL)
+                .withMessageBody(userJson);
+
+        amazonSQS.sendMessage(sendMessageRequest);
     }
 
     public User getUserById(String userId) {
