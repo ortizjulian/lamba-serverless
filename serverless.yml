@@ -1,43 +1,52 @@
-service: crud-lambda
+service: crud-personas
 
 provider:
   name: aws
   region: us-east-1
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+        - "dynamodb:UpdateItem"
+      Resource: arn:aws:dynamodb:us-east-1:738256604744:table/user
 
 functions:
   # Funciones Node.js
-  deleteUserNode:
-    handler: lambas-node/handlers/deleteUser.deleteUser
+  deleteUser:
+    handler: lambdas-node/handlers/deleteUser.deleteUser
     runtime: nodejs20.x
     events:
       - http:
           path: /users/{id}
           method: delete
 
-  updateUserNode:
-    handler: lambas-node/handlers/updateUser.updateUser
+  updateUser:
+    handler: lambdas-node/handlers/updateUser.updateUser
     runtime: nodejs20.x
     events:
       - http:
-          path: /users/{id}
+          path: /users
           method: put
 
   # Funciones Java
-  getUserJava:
+  getUser:
     handler: com.serverless.GetUser
     runtime: java17
     package:
-      artifact: lambas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
+      artifact: lambdas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
     events:
       - http:
           path: /users/{id}
           method: get
 
-  createUserJava:
+  createUser:
     handler: com.serverless.CreateUser
     runtime: java17
     package:
-      artifact: lambas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
+      artifact: lambdas-java/build/distributions/aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip
     events:
       - http:
           path: /users

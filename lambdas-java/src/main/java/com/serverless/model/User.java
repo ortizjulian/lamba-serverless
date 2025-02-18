@@ -1,21 +1,25 @@
-package com.serverless;
+package com.serverless.model;
 
-public class Person{
-    private int id;
+public class User {
+    private String id;
     private String name;
     private String email;
 
-    public Person(int id, String name, String email) {
+    public User(){
+
+    }
+
+    public User(String id, String name, String email) {
         this.id = id;
         this.name = name;
         this.email = email;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 

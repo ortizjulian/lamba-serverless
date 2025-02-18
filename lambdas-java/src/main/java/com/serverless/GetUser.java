@@ -4,57 +4,48 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.serverless.model.Response;
+import com.serverless.model.User;
+import com.serverless.service.UserService;
+import com.serverless.utils.JsonUtil;
 
 import java.util.HashMap;
 import java.util.List;
 
 public class GetUser implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>{
 
+	private UserService userService = new UserService();
+
 	@Override
 	public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-
-		List<Person> users = List.of(
-				new Person(1, "Julian", "julian.ortixs@gmail.com"),
-				new Person(2, "Julio", "julian.ortixs@gmail.com"),
-				new Person(3, "Juli", "julian.ortixs@gmail.com")
-		);
-
 		String pathParameter = event.getPathParameters().get("id");
-		if (pathParameter == null) {
+
+		if (pathParameter == null || pathParameter.isEmpty()) {
 			return createErrorResponse(400, "ID is required");
 		}
 
-		int userId = Integer.parseInt(pathParameter);
-
-		Person user = findUserById(users, userId);
+		userService.initDynamoDbClient();
+		User user = userService.getUserById(pathParameter);
 
 		if (user == null) {
-			return createErrorResponse(404, "Usuario no encontrado");
+			return createErrorResponse(404, "User not found");
 		}
 
 		return createSuccessResponse(user);
 	}
 
-	private Person findUserById(List<Person> users, int userId) {
-		return users.stream()
-				.filter(u -> u.getId() == userId)
-				.findFirst()
-				.orElse(null);
-	}
-
 	private APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
 		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 		response.setStatusCode(statusCode);
-		response.setBody("{\"message\": \"" + message + "\"}");
-		response.setHeaders(new HashMap<>());
+		Response errorResponse = new Response(message);
+		response.setBody(JsonUtil.toJson(errorResponse));
 		return response;
 	}
 
-	private APIGatewayProxyResponseEvent createSuccessResponse(Person user) {
+	private APIGatewayProxyResponseEvent createSuccessResponse(User user) {
 		APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 		response.setStatusCode(200);
-		response.setBody("{\"id\": " + user.getId() + ", \"name\": \"" + user.getName() + "\", \"email\": \"" + user.getEmail() + "\"}");
-		response.setHeaders(new HashMap<>());
+		response.setBody(JsonUtil.toJson(user));
 		return response;
 	}
 }
