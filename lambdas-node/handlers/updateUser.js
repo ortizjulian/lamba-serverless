@@ -1,10 +1,17 @@
-exports.updateUsers = async (event) => {
-  const users = [
-    { id: 1, name: "Julian", email: "julian.ortixs@gmail.com" },
-    { id: 2, name: "Julio", email: "julian.ortixs@gmail.com" },
-    { id: 3, name: "Juli", email: "julian.ortixs@gmail.com" },
-  ];
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const {
+  DynamoDBDocumentClient,
+  GetCommand,
+  UpdateCommand,
+} = require("@aws-sdk/lib-dynamodb");
 
+const client = new DynamoDBClient({});
+
+const dynamo = DynamoDBDocumentClient.from(client);
+
+const tableName = "user";
+
+exports.updateUser = async (event) => {
   const user = event.body ? JSON.parse(event.body) : null;
 
   if (!user) {
@@ -24,10 +31,18 @@ exports.updateUsers = async (event) => {
       }),
     };
   }
+  const userId = user.id;
+  let body;
+  body = await dynamo.send(
+    new GetCommand({
+      TableName: tableName,
+      Key: {
+        id: userId,
+      },
+    })
+  );
 
-  const index = users.findIndex((u) => u.id === user.id);
-
-  if (index === -1) {
+  if (!body.Item) {
     return {
       statusCode: 404,
       body: JSON.stringify({
@@ -36,13 +51,28 @@ exports.updateUsers = async (event) => {
     };
   }
 
-  users[index] = { ...users[index], ...user };
+  const updateParams = {
+    TableName: "user",
+    Key: { id: userId },
+    UpdateExpression: "set #name = :name, #email = :email",
+    ExpressionAttributeNames: {
+      "#name": "name",
+      "#email": "email",
+    },
+    ExpressionAttributeValues: {
+      ":name": user.name,
+      ":email": user.email,
+    },
+    ReturnValues: "ALL_NEW",
+  };
+
+  const updatedUser = await dynamo.send(new UpdateCommand(updateParams));
 
   return {
     statusCode: 200,
     body: JSON.stringify({
       message: "Usuario actualizado",
-      user: users[index],
+      user: updatedUser.Attributes,
     }),
   };
 };

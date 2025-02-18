@@ -10,6 +10,7 @@ provider:
         - "dynamodb:PutItem"
         - "dynamodb:Query"
         - "dynamodb:Scan"
+        - "dynamodb:DeleteItem"
         - "dynamodb:UpdateItem"
       Resource: arn:aws:dynamodb:us-east-1:738256604744:table/user
 

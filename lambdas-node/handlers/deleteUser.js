@@ -1,25 +1,48 @@
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const {
+  DynamoDBDocumentClient,
+  GetCommand,
+  DeleteCommand,
+} = require("@aws-sdk/lib-dynamodb");
+const client = new DynamoDBClient({});
+
+const dynamo = DynamoDBDocumentClient.from(client);
+
+const tableName = "user";
+
 exports.deleteUser = async (event) => {
-  const users = [
-    { id: 1, name: "Julian", email: "julian.ortixs@gmail.com" },
-    { id: 2, name: "Julio", email: "julian.ortixs@gmail.com" },
-    { id: 3, name: "Juli", email: "julian.ortixs@gmail.com" },
-  ];
+  let body;
+  body = await dynamo.send(
+    new GetCommand({
+      TableName: tableName,
+      Key: {
+        id: event.pathParameters.id,
+      },
+    })
+  );
 
-  const userId = parseInt(event.pathParameters.id);
-
-  const userIndex = users.findIndex((u) => u.id === userId);
-
-  if (userIndex === -1) {
+  if (!body.Item) {
     return {
       statusCode: 404,
-      body: JSON.stringify({ message: "Usuario no encontrado" }),
+      body: JSON.stringify({
+        message: "User not found",
+      }),
     };
   }
 
-  users.splice(userIndex, 1);
+  await dynamo.send(
+    new DeleteCommand({
+      TableName: tableName,
+      Key: {
+        id: event.pathParameters.id,
+      },
+    })
+  );
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ message: "Usuario eliminado con éxito" }),
+    body: JSON.stringify({
+      message: "User deleted successfully",
+    }),
   };
 };
