@@ -8,7 +8,7 @@ const client = new DynamoDBClient({});
 
 const dynamo = DynamoDBDocumentClient.from(client);
 
-const tableName = "user";
+const tableName = process.env.DYNAMODB_TABLE_NAME;
 
 exports.deleteUser = async (event) => {
   let body;

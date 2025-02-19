@@ -24,7 +24,6 @@ public class GetUser implements RequestHandler<APIGatewayProxyRequestEvent, APIG
 			return createErrorResponse(400, "ID is required");
 		}
 
-		userService.initDynamoDbClient();
 		User user = userService.getUserById(pathParameter);
 
 		if (user == null) {

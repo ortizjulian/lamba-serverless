@@ -1,0 +1,368 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Plantilla para crear tabla users en DynamoDb y funcion Lambda
+
+Resources:
+  #Tabla Dynamo - User
+  TablaUser:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: users
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  #Lambdas
+  GetUser:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: "bucket-lambas"
+        S3Key: "aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip"
+      Description: "Get User"
+      FunctionName: "GetUser"
+      Handler: "com.serverless.GetUser"
+      Role: !GetAtt LambdaDynamoDBRole.Arn
+      Runtime: "java17"
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref TablaUser
+
+  CreateUser:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: "bucket-lambas"
+        S3Key: "aws-java-simple-http-endpoint-1.0-SNAPSHOT.zip"
+      Description: "Create User"
+      FunctionName: "CreateUser"
+      Handler: "com.serverless.CreateUser"
+      Role: !GetAtt LambdaCreateUserRole.Arn
+      Runtime: "java17"
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref TablaUser
+          SQS_QUEUE_URL: !GetAtt ColaUsuarioCreado.QueueUrl
+
+  DeleteUser:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: "bucket-lambas"
+        S3Key: "handlers.zip"
+      Description: "Delete User"
+      FunctionName: "DeleteUser"
+      Handler: "handlers/deleteUser.deleteUser"
+      Role: !GetAtt LambdaDynamoDBRole.Arn
+      Runtime: "nodejs20.x"
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref TablaUser
+
+  UpdateUser:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: "bucket-lambas"
+        S3Key: "handlers.zip"
+      Description: "Update User"
+      FunctionName: "UpdateUser"
+      Handler: "handlers/updateUser.updateUser"
+      Role: !GetAtt LambdaDynamoDBRole.Arn
+      Runtime: "nodejs20.x"
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref TablaUser
+
+  SendEmail:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: "bucket-lambas"
+        S3Key: "handlers.zip"
+      Description: "Send Email"
+      FunctionName: "SendEmail"
+      Handler: "handlers/sendEmail.sendEmail"
+      Role: !GetAtt LambdaSendEmailRole.Arn
+      Runtime: "nodejs20.x"
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !GetAtt ColaUsuarioCreado.QueueUrl
+          TOPIC_ARN: !Ref TopicUsuarioCreado
+
+  #Api Gateway
+  ApiGatewayHttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: "UserApi"
+      Description: "API usuarios"
+      ProtocolType: HTTP
+
+  #Get user
+  ApiGatewayIntegrationGetUsers:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetUser.Arn}/invocations
+      CredentialsArn: !GetAtt ApiGatewayRole.Arn
+      PayloadFormatVersion: "2.0"
+
+  ApiGetUsers:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      RouteKey: "GET /users/{id}"
+      Target: !Sub integrations/${ApiGatewayIntegrationGetUsers}
+
+  #Delete User
+  ApiGatewayIntegrationDeleteUser:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      IntegrationType: AWS_PROXY
+      CredentialsArn: !GetAtt ApiGatewayRole.Arn
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteUser.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  ApiDeleteUser:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      RouteKey: "DELETE /users/{id}"
+      Target: !Sub integrations/${ApiGatewayIntegrationDeleteUser}
+
+  #Update User
+  ApiGatewayIntegrationUpdateUser:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      IntegrationType: AWS_PROXY
+      CredentialsArn: !GetAtt ApiGatewayRole.Arn
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateUser.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  ApiUpdateUser:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      RouteKey: "PUT /users"
+      Target: !Sub integrations/${ApiGatewayIntegrationUpdateUser}
+
+  #Create User
+  ApiGatewayIntegrationCreateUser:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUser.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+      CredentialsArn: !GetAtt ApiGatewayRole.Arn
+
+  ApiCreateUser:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+      RouteKey: "POST /users"
+      Target: !Sub integrations/${ApiGatewayIntegrationCreateUser}
+
+  #Deploy + Stage
+  ApiGatewayDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    Properties:
+      ApiId: !Ref ApiGatewayHttpApi
+    DependsOn:
+      - ApiGetUsers
+      - ApiDeleteUser
+      - ApiUpdateUser
+      - ApiCreateUser
+
+  ApiGatewayStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: "dev"
+      DeploymentId: !Ref ApiGatewayDeployment
+      ApiId: !Ref ApiGatewayHttpApi
+
+  #SQS
+  ColaUsuarioCreado:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ColaUsuarioCreado
+
+  ColaUsuarioCreadoPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ColaUsuarioCreado
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowSpecificLambdaToSendMessages"
+            Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt ColaUsuarioCreado.Arn
+            Condition:
+              ArnLike:
+                "AWS:SourceArn": !Ref SendEmail
+
+  EventSQSInvokeSendEmail:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      FunctionName: !Ref SendEmail
+      EventSourceArn: !GetAtt ColaUsuarioCreado.Arn
+      Enabled: True
+      BatchSize: 10
+
+  #Sns
+  TopicUsuarioCreado:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: UsuarioCreado
+      Subscription:
+        - Protocol: email
+          Endpoint: "julian.ortixs@gmail.com"
+
+  #--------------Permisos----------------
+
+  # Política para permisos de DynamoDB
+  LambdaDynamoDBPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: LambdaDynamoDBPolicy
+      Roles:
+        - !Ref LambdaDynamoDBRole
+        - !Ref LambdaCreateUserRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !GetAtt TablaUser.Arn
+
+  # Política para enviar mensaje a sqs
+  LambdaSQSPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: LambdaSQSPolicy
+      Roles:
+        - !Ref LambdaCreateUserRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sqs:SendMessage
+            Resource: !GetAtt ColaUsuarioCreado.Arn
+
+  # Politica para recibir mensaje de sqs y publicar en sns
+  LambdaSendEmailPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: LambdaSendEmailPolicy
+      Roles:
+        - !Ref LambdaSendEmailRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSQSReceiveMessage
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt ColaUsuarioCreado.Arn
+          - Sid: AllowSNSPublish
+            Effect: Allow
+            Action: sns:Publish
+            Resource: !Ref TopicUsuarioCreado
+
+  # Rol para dar permisos a las lambdas de acceder a la tabla
+  LambdaDynamoDBRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+
+  # Rol para lambda enviar correo
+  LambdaSendEmailRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+
+  #Rol para lambda crear usuario-acceso a dynamo + sqs
+  LambdaCreateUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+
+  #Rol para el api gateway que le permite invocar las lambdas
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: ApiGatewayLambdaInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt GetUser.Arn
+                  - !GetAtt DeleteUser.Arn
+                  - !GetAtt UpdateUser.Arn
+                  - !GetAtt CreateUser.Arn

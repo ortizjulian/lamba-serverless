@@ -9,7 +9,7 @@ const client = new DynamoDBClient({});
 
 const dynamo = DynamoDBDocumentClient.from(client);
 
-const tableName = "user";
+const tableName = process.env.DYNAMODB_TABLE_NAME;
 
 exports.updateUser = async (event) => {
   const user = event.body ? JSON.parse(event.body) : null;
@@ -52,7 +52,7 @@ exports.updateUser = async (event) => {
   }
 
   const updateParams = {
-    TableName: "user",
+    TableName: tableName,
     Key: { id: userId },
     UpdateExpression: "set #name = :name, #email = :email",
     ExpressionAttributeNames: {

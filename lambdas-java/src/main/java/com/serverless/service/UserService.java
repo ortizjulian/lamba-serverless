@@ -21,11 +21,19 @@ public class UserService {
 
     private AmazonDynamoDB amazonDynamoDB;
 
-    private String DYNAMODB_TABLE_NAME = "user";
-    private Regions REGION = Regions.US_EAST_1;
-    private AmazonSQS amazonSQS = AmazonSQSClient.builder().withRegion(REGION).build();
-    private String SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/738256604744/colaUsuarioCreado";
-    public void initDynamoDbClient() {
+    private String DYNAMODB_TABLE_NAME;
+    private Regions REGION;
+    private AmazonSQS amazonSQS;
+    private String SQS_QUEUE_URL;
+
+    public UserService() {
+
+        REGION = Regions.US_EAST_1;
+        amazonSQS = AmazonSQSClient.builder().withRegion(REGION).build();
+        Map<String, String> environment = System.getenv();
+        DYNAMODB_TABLE_NAME = environment.get("DYNAMODB_TABLE_NAME");
+        SQS_QUEUE_URL = environment.get("SQS_QUEUE_URL");
+
         this.amazonDynamoDB = AmazonDynamoDBClientBuilder.standard()
                 .withRegion(REGION)
                 .build();

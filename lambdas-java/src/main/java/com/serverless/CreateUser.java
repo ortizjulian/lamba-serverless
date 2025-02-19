@@ -27,8 +27,6 @@ public class CreateUser implements RequestHandler<APIGatewayProxyRequestEvent, A
             return response;
         }
 
-        userService.initDynamoDbClient();
-
         try {
             User newUser = new ObjectMapper().readValue(body, User.class);
             String userId = userService.persistData(newUser);
