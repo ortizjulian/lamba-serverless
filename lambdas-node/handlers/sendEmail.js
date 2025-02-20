@@ -1,5 +1,5 @@
-import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-import { SQSClient, DeleteMessageCommand } from "@aws-sdk/client-sqs";
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+const { SQSClient, DeleteMessageCommand } = require("@aws-sdk/client-sqs");
 
 const snsClient = new SNSClient({});
 const sqsClient = new SQSClient({});
